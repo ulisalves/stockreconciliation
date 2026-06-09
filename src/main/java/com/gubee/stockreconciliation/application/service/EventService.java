@@ -25,9 +25,11 @@ public class EventService {
     private final StockRepository stockRepository;
 
     public void process(CreateEventRequest request) {
+        // Idempotência
         if (stockEventRepository.existsByEventId(request.getEventId())) {
             return;
         }
+        // Cria evento
         StockEvent event = new StockEvent();
         event.setEventId(request.getEventId());
         event.setType(request.getType());
@@ -38,6 +40,7 @@ public class EventService {
         event.setStatus(EventStatus.PENDING);
         stockEventRepository.save(event);
 
+        // Busca pedido
         Optional<OrderLifecycle> orderOpt = orderLifecycleRepository.findByOrderId(request.getOrderId());
         OrderLifecycle order;
 
@@ -51,17 +54,26 @@ public class EventService {
             order.setQuantity(request.getQuantity());
         }
 
+        // =====================================================
+        // ORDER_CREATED
+        // =====================================================
         if (request.getType() == EventType.ORDER_CREATED) {
             order.setStatus(OrderStatus.CREATED);
             orderLifecycleRepository.save(order);
         }
 
+        // =====================================================
+        // ORDER_CANCELLED
+        // =====================================================
+
         if (request.getType() == EventType.ORDER_CANCELLED) {
+            // Evento fora de ordem
             if (orderOpt.isEmpty()) {
                 event.setStatus(EventStatus.PENDING);
                 stockEventRepository.save(event);
                 return;
             }
+            // Cancelamento duplicado
             if (order.getStatus() == OrderStatus.CANCELLED) {
                 event.setStatus(EventStatus.IGNORED);
                 stockEventRepository.save(event);
@@ -71,13 +83,22 @@ public class EventService {
             orderLifecycleRepository.save(order);
         }
 
+        // =====================================================
+        // ESTOQUE
+        // =====================================================
         Optional<Stock> stockOpt = stockRepository.findByAccountIdAndSku(request.getAccountId(), request.getSku());
 
         if (stockOpt.isEmpty()) {
             Stock stock = new Stock();
             stock.setAccountId(request.getAccountId());
             stock.setSku(request.getSku());
-            stock.setAvailableQuantity(-request.getQuantity());
+
+            if (request.getType() == EventType.ORDER_CREATED) {
+                stock.setAvailableQuantity(-request.getQuantity());
+            }
+            if (request.getType() == EventType.ORDER_CANCELLED) {
+                stock.setAvailableQuantity(request.getQuantity());
+            }
             stockRepository.save(stock);
 
         } else {
