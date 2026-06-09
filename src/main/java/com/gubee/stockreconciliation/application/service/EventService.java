@@ -5,6 +5,7 @@ import com.gubee.stockreconciliation.adapters.outbound.persistence.repository.St
 import com.gubee.stockreconciliation.adapters.outbound.persistence.repository.StockRepository;
 import com.gubee.stockreconciliation.application.dto.CreateEventRequest;
 import com.gubee.stockreconciliation.domain.enums.EventStatus;
+import com.gubee.stockreconciliation.domain.enums.EventType;
 import com.gubee.stockreconciliation.domain.enums.OrderStatus;
 import com.gubee.stockreconciliation.domain.model.OrderLifecycle;
 import com.gubee.stockreconciliation.domain.model.Stock;
@@ -37,16 +38,40 @@ public class EventService {
         event.setStatus(EventStatus.PENDING);
         stockEventRepository.save(event);
 
-        OrderLifecycle order = new OrderLifecycle();
-        order.setOrderId(request.getOrderId());
-        order.setAccountId(request.getAccountId());
-        order.setSku(request.getSku());
-        order.setQuantity(request.getQuantity());
-        order.setStatus(OrderStatus.CREATED);
-        orderLifecycleRepository.save(order);
+        Optional<OrderLifecycle> orderOpt = orderLifecycleRepository.findByOrderId(request.getOrderId());
+        OrderLifecycle order;
 
-        Optional<Stock> stockOpt = stockRepository
-                .findByAccountIdAndSku(request.getAccountId(), request.getSku());
+        if (orderOpt.isPresent()) {
+            order = orderOpt.get();
+        } else {
+            order = new OrderLifecycle();
+            order.setOrderId(request.getOrderId());
+            order.setAccountId(request.getAccountId());
+            order.setSku(request.getSku());
+            order.setQuantity(request.getQuantity());
+        }
+
+        if (request.getType() == EventType.ORDER_CREATED) {
+            order.setStatus(OrderStatus.CREATED);
+            orderLifecycleRepository.save(order);
+        }
+
+        if (request.getType() == EventType.ORDER_CANCELLED) {
+            if (orderOpt.isEmpty()) {
+                event.setStatus(EventStatus.PENDING);
+                stockEventRepository.save(event);
+                return;
+            }
+            if (order.getStatus() == OrderStatus.CANCELLED) {
+                event.setStatus(EventStatus.IGNORED);
+                stockEventRepository.save(event);
+                return;
+            }
+            order.setStatus(OrderStatus.CANCELLED);
+            orderLifecycleRepository.save(order);
+        }
+
+        Optional<Stock> stockOpt = stockRepository.findByAccountIdAndSku(request.getAccountId(), request.getSku());
 
         if (stockOpt.isEmpty()) {
             Stock stock = new Stock();
@@ -57,7 +82,12 @@ public class EventService {
 
         } else {
             Stock stock = stockOpt.get();
-            stock.setAvailableQuantity(stock.getAvailableQuantity() - request.getQuantity());
+            if (request.getType() == EventType.ORDER_CREATED) {
+                stock.setAvailableQuantity(stock.getAvailableQuantity() - request.getQuantity());
+            }
+            if (request.getType() == EventType.ORDER_CANCELLED) {
+                stock.setAvailableQuantity(stock.getAvailableQuantity() + request.getQuantity());
+            }
             stockRepository.save(stock);
         }
         event.setStatus(EventStatus.PROCESSED);
