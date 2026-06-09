@@ -17,6 +17,10 @@ public class EventService {
 
     public void process(CreateEventRequest request) {
 
+        if (stockEventRepository.existsByEventId(request.getEventId())) {
+            return;
+        }
+
         StockEvent event = new StockEvent();
 
         event.setEventId(request.getEventId());

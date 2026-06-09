@@ -22,4 +22,8 @@ public class CreateEventRequest {
     private String sku;
 
     private Instant occurredAt;
+
+    private String orderId;
+
+    private Integer quantity;
 }

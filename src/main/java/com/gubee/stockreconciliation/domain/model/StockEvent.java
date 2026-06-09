@@ -38,4 +38,8 @@ public class StockEvent {
 
     private Instant processedAt;
 
+    private String orderId;
+
+    private Integer quantity;
+
 }
