@@ -4,16 +4,16 @@ import com.gubee.stockreconciliation.domain.enums.EventStatus;
 import com.gubee.stockreconciliation.domain.enums.EventType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
 
+@AllArgsConstructor
+@NoArgsConstructor
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 @Entity
 public class StockEvent {
 
@@ -37,4 +37,5 @@ public class StockEvent {
     private Instant occurredAt;
 
     private Instant processedAt;
+
 }
