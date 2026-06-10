@@ -64,3 +64,17 @@ Limitações conhecidas
 Reprocessamento automático de eventos pendentes não implementado.
 Kafka substituído por processamento síncrono para simplificação do desafio.
 Concorrência distribuída não implementada.
+
+## Evidências
+
+As evidências de execução encontram-se na pasta:
+
+/docs/evidences
+
+Incluindo:
+
+- Swagger
+- Actuator
+- Fluxo de eventos
+- Consultas SQL
+- Cenários do desafio
