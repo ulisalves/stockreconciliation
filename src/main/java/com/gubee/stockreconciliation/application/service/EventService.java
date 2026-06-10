@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -167,6 +168,9 @@ public class EventService {
         }
         event.setStatus(EventStatus.PROCESSED);
         stockEventRepository.save(event);
+    }
 
+    public List<StockEvent> findByStatus(EventStatus status) {
+        return stockEventRepository.findByStatus(status);
     }
 }

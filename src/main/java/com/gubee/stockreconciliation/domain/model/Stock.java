@@ -22,7 +22,8 @@ public class Stock {
     private Long id;
 
     @Version
-    private Long version;
+    @Column(nullable = false)
+    private Long version = 0L;
 
     private String accountId;
 
