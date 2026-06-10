@@ -26,4 +26,6 @@ public class CreateEventRequest {
     private String orderId;
 
     private Integer quantity;
+
+    private Integer available;
 }

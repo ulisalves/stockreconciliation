@@ -138,6 +138,24 @@ public class EventService {
             orderLifecycleRepository.save(order);
         }
 
+        if (request.getType() == EventType.STOCK_ADJUSTED) {
+            Optional<Stock> stockOpt = stockRepository.findByAccountIdAndSku(request.getAccountId(), request.getSku());
+            Stock stock;
+            
+            if(stockOpt.isPresent()) {
+                stock = stockOpt.get();
+            } else {
+                stock = new Stock();
+                stock.setAccountId(request.getAccountId());
+                stock.setSku(request.getSku());
+            }
+            stock.setAvailableQuantity(request.getAvailable());
+            stockRepository.save(stock);
+            event.setStatus(EventStatus.PROCESSED);
+            stockEventRepository.save(event);
+            return;
+        }
+
         // =====================================================
         // ESTOQUE
         // =====================================================
