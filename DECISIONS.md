@@ -81,15 +81,15 @@ Nenhuma alteração de estoque é realizada.
 
 ## 6. Concorrência
 
-    Foi utilizada estratégia de Optimistic Locking 
-    (Bloqueio Otimista) que assumi que colisões de dados são raras
+Foi utilizada a estratégia de Optimistic Locking através do JPA:
 
 ```
 @Version
 private Long version;
 
-Essa abordagem evita sobrescrita silenciosa em atualizações simultâneas do mesmo SKU.
-Foi escolhida por sua simplicidade e aderência ao contexto do desafio.
+O mecanismo impede sobrescritas silenciosas quando múltiplas transações tentam atualizar o mesmo registro simultaneamente.
+Controle de concorrência local implementado via Optimistic Locking.
+Concorrência distribuída entre múltiplas instâncias não implementada.
 
 ```
 ## 7. Múltiplas Instâncias
