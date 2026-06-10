@@ -141,7 +141,7 @@ public class EventService {
         if (request.getType() == EventType.STOCK_ADJUSTED) {
             Optional<Stock> stockOpt = stockRepository.findByAccountIdAndSku(request.getAccountId(), request.getSku());
             Stock stock;
-            
+
             if(stockOpt.isPresent()) {
                 stock = stockOpt.get();
             } else {
@@ -151,6 +151,12 @@ public class EventService {
             }
             stock.setAvailableQuantity(request.getAvailable());
             stockRepository.save(stock);
+            event.setStatus(EventStatus.PROCESSED);
+            stockEventRepository.save(event);
+            return;
+        }
+
+        if (request.getType() == EventType.STOCK_SYNC_SENT) {
             event.setStatus(EventStatus.PROCESSED);
             stockEventRepository.save(event);
             return;
