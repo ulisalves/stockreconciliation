@@ -21,6 +21,9 @@ public class Stock {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     private String accountId;
 
     private String sku;

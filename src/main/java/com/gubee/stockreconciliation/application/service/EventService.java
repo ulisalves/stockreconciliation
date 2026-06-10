@@ -29,8 +29,22 @@ public class EventService {
 
     @Transactional
     public void process(CreateEventRequest request) {
+
+        //logs estruturados - Log início
+        log.info(
+                "Processing eventId={}, type={}, orderId={}",
+                request.getEventId(),
+                request.getType(),
+                request.getOrderId()
+        );
+
         // Idempotência
         if (stockEventRepository.existsByEventId(request.getEventId())) {
+            //logs estruturados - Evento duplicado
+            log.warn(
+                    "Ignoring duplicated event {}",
+                    request.getEventId()
+            );
             return;
         }
         // Cria evento
@@ -75,12 +89,23 @@ public class EventService {
             if (orderOpt.isEmpty()) {
                 event.setStatus(EventStatus.PENDING);
                 stockEventRepository.save(event);
+                //logs estruturados - Evento pendente
+                log.info(
+                        "Order {} not found. Event {} marked as PENDING",
+                        request.getOrderId(),
+                        request.getEventId()
+                );
                 return;
             }
             // Cancelamento duplicado
             if (order.getStatus() == OrderStatus.CANCELLED) {
                 event.setStatus(EventStatus.IGNORED);
                 stockEventRepository.save(event);
+                //logs estruturados - Evento ignorado
+                log.info(
+                        "Order {} already cancelled",
+                        request.getOrderId()
+                );
                 return;
             }
             order.setStatus(OrderStatus.CANCELLED);
@@ -99,6 +124,11 @@ public class EventService {
             }
 
             if (order.getStatus() == OrderStatus.STOCK_RESTORED) {
+                //Logs estruturados - Marketplace duplicado
+                log.info(
+                        "Stock already restored for order {}",
+                        request.getOrderId()
+                );
                 event.setStatus(EventStatus.IGNORED);
                 stockEventRepository.save(event);
                 return;
