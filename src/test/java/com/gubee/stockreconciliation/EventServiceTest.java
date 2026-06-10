@@ -1,7 +1,9 @@
 package com.gubee.stockreconciliation;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 
+@SpringBootTest
 public class EventServiceTest {
 
     @Test
