@@ -12,6 +12,7 @@ import com.gubee.stockreconciliation.domain.model.Stock;
 import com.gubee.stockreconciliation.domain.model.StockEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -24,6 +25,7 @@ public class EventService {
     private final OrderLifecycleRepository orderLifecycleRepository;
     private final StockRepository stockRepository;
 
+    @Transactional
     public void process(CreateEventRequest request) {
         // Idempotência
         if (stockEventRepository.existsByEventId(request.getEventId())) {
@@ -84,6 +86,26 @@ public class EventService {
         }
 
         // =====================================================
+        // MARKETPLACE_STOCK_RESTORED
+        // =====================================================
+
+        if (request.getType() == EventType.MARKETPLACE_STOCK_RESTORED) {
+            if (orderOpt.isEmpty()) {
+                event.setStatus(EventStatus.PENDING);
+                stockEventRepository.save(event);
+                return;
+            }
+
+            if (order.getStatus() == OrderStatus.STOCK_RESTORED) {
+                event.setStatus(EventStatus.IGNORED);
+                stockEventRepository.save(event);
+                return;
+            }
+            order.setStatus(OrderStatus.STOCK_RESTORED);
+            orderLifecycleRepository.save(order);
+        }
+
+        // =====================================================
         // ESTOQUE
         // =====================================================
         Optional<Stock> stockOpt = stockRepository.findByAccountIdAndSku(request.getAccountId(), request.getSku());
@@ -93,20 +115,20 @@ public class EventService {
             stock.setAccountId(request.getAccountId());
             stock.setSku(request.getSku());
 
-            if (request.getType() == EventType.ORDER_CREATED) {
+            if (request.getType() == EventType.ORDER_CREATED){
                 stock.setAvailableQuantity(-request.getQuantity());
             }
-            if (request.getType() == EventType.ORDER_CANCELLED) {
+            if (request.getType() == EventType.ORDER_CANCELLED || request.getType() == EventType.MARKETPLACE_STOCK_RESTORED) {
                 stock.setAvailableQuantity(request.getQuantity());
             }
             stockRepository.save(stock);
 
         } else {
             Stock stock = stockOpt.get();
-            if (request.getType() == EventType.ORDER_CREATED) {
+            if (request.getType() == EventType.ORDER_CREATED){
                 stock.setAvailableQuantity(stock.getAvailableQuantity() - request.getQuantity());
             }
-            if (request.getType() == EventType.ORDER_CANCELLED) {
+            if (request.getType() == EventType.ORDER_CANCELLED || request.getType() == EventType.MARKETPLACE_STOCK_RESTORED) {
                 stock.setAvailableQuantity(stock.getAvailableQuantity() + request.getQuantity());
             }
             stockRepository.save(stock);
