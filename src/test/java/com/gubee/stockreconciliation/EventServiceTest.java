@@ -2,6 +2,7 @@ package com.gubee.stockreconciliation;
 
 import com.gubee.stockreconciliation.adapters.outbound.persistence.repository.OrderLifecycleRepository;
 import com.gubee.stockreconciliation.adapters.outbound.persistence.repository.StockEventRepository;
+import com.gubee.stockreconciliation.adapters.outbound.persistence.repository.StockRepository;
 import com.gubee.stockreconciliation.application.dto.CreateEventRequest;
 import com.gubee.stockreconciliation.application.service.EventService;
 import com.gubee.stockreconciliation.domain.enums.EventStatus;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.AfterEach;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -26,16 +28,27 @@ public class EventServiceTest {
     @Autowired
     private StockEventRepository stockEventRepository;
     @Autowired
+
     private OrderLifecycleRepository orderLifecycleRepository;
+
+    @Autowired
+    private StockRepository stockRepository;
+
+    @AfterEach
+    void cleanup() {
+        stockEventRepository.deleteAll();
+        orderLifecycleRepository.deleteAll();
+        stockRepository.deleteAll();
+    }
 
     @Test
     void shouldIgnoreDuplicatedEvent() {
         CreateEventRequest request = new CreateEventRequest();
-        request.setEventId("EVT-TEST-001");
+        request.setEventId("EVT-TEST-002");
         request.setType(EventType.ORDER_CREATED);
         request.setAccountId("ACCOUNT-1");
         request.setSku("TV001");
-        request.setOrderId("ORDER-001");
+        request.setOrderId("ORDER-002");
         request.setQuantity(1);
         request.setOccurredAt(Instant.now());
 
@@ -50,17 +63,17 @@ public class EventServiceTest {
     void shouldCreateOrder() {
         CreateEventRequest request = new CreateEventRequest();
 
-        request.setEventId("EVT-100");
+        request.setEventId("EVT-001");
         request.setType(EventType.ORDER_CREATED);
         request.setAccountId("ACCOUNT-1");
         request.setSku("TV001");
-        request.setOrderId("ORDER-100");
+        request.setOrderId("ORDER-001");
         request.setQuantity(2);
         request.setOccurredAt(Instant.now());
 
         eventService.process(request);
 
-        Optional<OrderLifecycle> order = orderLifecycleRepository.findByOrderId("ORDER-100");
+        Optional<OrderLifecycle> order = orderLifecycleRepository.findByOrderId("ORDER-001");
 
         Assertions.assertTrue(order.isPresent());
 
@@ -71,11 +84,11 @@ public class EventServiceTest {
     void shouldCancelOrder() {
         CreateEventRequest create = new CreateEventRequest();
 
-        create.setEventId("EVT-200");
+        create.setEventId("EVT-003");
         create.setType(EventType.ORDER_CREATED);
         create.setAccountId("ACCOUNT-1");
         create.setSku("TV001");
-        create.setOrderId("ORDER-200");
+        create.setOrderId("ORDER-003");
         create.setQuantity(1);
         create.setOccurredAt(Instant.now());
 
@@ -87,13 +100,13 @@ public class EventServiceTest {
         cancel.setType(EventType.ORDER_CANCELLED);
         cancel.setAccountId("ACCOUNT-1");
         cancel.setSku("TV001");
-        cancel.setOrderId("ORDER-200");
+        cancel.setOrderId("ORDER-003");
         cancel.setQuantity(1);
         cancel.setOccurredAt(Instant.now());
 
         eventService.process(cancel);
 
-        OrderLifecycle order = orderLifecycleRepository.findByOrderId("ORDER-200").orElseThrow();
+        OrderLifecycle order = orderLifecycleRepository.findByOrderId("ORDER-003").orElseThrow();
 
         Assertions.assertEquals(OrderStatus.CANCELLED, order.getStatus());
     }
@@ -163,22 +176,22 @@ public class EventServiceTest {
     void shouldRestoreStockOnlyOnce() {
         CreateEventRequest created = new CreateEventRequest();
 
-        created.setEventId("EVT-100");
+        created.setEventId("EVT-004");
         created.setType(EventType.ORDER_CREATED);
         created.setAccountId("ACCOUNT-1");
         created.setSku("TV001");
-        created.setOrderId("ORDER-100");
+        created.setOrderId("ORDER-004");
         created.setQuantity(1);
         created.setOccurredAt(Instant.now());
         eventService.process(created);
 
         CreateEventRequest restored = new CreateEventRequest();
 
-        restored.setEventId("EVT-101");
+        restored.setEventId("EVT-005");
         restored.setType(EventType.MARKETPLACE_STOCK_RESTORED);
         restored.setAccountId("ACCOUNT-1");
         restored.setSku("TV001");
-        restored.setOrderId("ORDER-100");
+        restored.setOrderId("ORDER-004");
         restored.setQuantity(1);
         restored.setOccurredAt(Instant.now());
 
@@ -186,17 +199,17 @@ public class EventServiceTest {
 
         CreateEventRequest duplicated = new CreateEventRequest();
 
-        duplicated.setEventId("EVT-102");
+        duplicated.setEventId("EVT-006");
         duplicated.setType(EventType.MARKETPLACE_STOCK_RESTORED);
         duplicated.setAccountId("ACCOUNT-1");
         duplicated.setSku("TV001");
-        duplicated.setOrderId("ORDER-100");
+        duplicated.setOrderId("ORDER-004");
         duplicated.setQuantity(1);
         duplicated.setOccurredAt(Instant.now());
 
         eventService.process(duplicated);
 
-        StockEvent event = stockEventRepository.findByEventId("EVT-102").orElseThrow();
+        StockEvent event = stockEventRepository.findByEventId("EVT-006").orElseThrow();
 
         Assertions.assertEquals(EventStatus.IGNORED, event.getStatus());
     }
